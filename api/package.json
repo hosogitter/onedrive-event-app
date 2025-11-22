@@ -1,0 +1,9 @@
+{
+  "name": "azure-functions-api",
+  "version": "1.0.0",
+  "dependencies": {
+    "@azure/msal-node": "^2.1.0",
+    "axios": "^1.4.0",
+    "cookie": "^0.5.0"
+  }
+}
