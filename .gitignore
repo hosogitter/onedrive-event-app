@@ -1,0 +1,8 @@
+# 依存関係ファイル
+/node_modules
+
+# 環境変数・秘密鍵ファイル
+.env
+
+# ログファイル
+npm-debug.log*

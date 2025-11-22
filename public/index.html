@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>イベント受付アプリ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="login-screen" style="display:none;">
+        <h2>サインインが必要です</h2>
+        <button onclick="window.location.href='/auth/signin'" class="btn-large">Microsoftでサインイン</button>
+    </div>
+
+    <div id="app-container" style="display:none;">
+        
+        <div id="dashboard">
+            <h2>イベントを選択してください</h2>
+            <div class="grid-container">
+                <button class="btn-event" onclick="openForm('夏の商談会')">
+                    夏の商談会<br>
+                    <span id="count-夏の商談会" class="badge">0人</span>
+                </button>
+                
+                <button class="btn-event" onclick="openForm('秋の技術展')">
+                    秋の技術展<br>
+                    <span id="count-秋の技術展" class="badge">0人</span>
+                </button>
+
+                <button class="btn-event" onclick="openForm('冬の感謝祭')">
+                    冬の感謝祭<br>
+                    <span id="count-冬の感謝祭" class="badge">0人</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="entry-form" class="hidden">
+            <h2 id="form-title">登録フォーム</h2>
+            
+            <form id="receptionForm" onsubmit="submitData(event)">
+                <div class="form-group">
+                    <label>イベント名</label>
+                    <input type="text" id="input-event" readonly class="input-large readonly">
+                </div>
+                <div class="form-group">
+                    <label>ナマエ</label>
+                    <input type="text" id="input-name" required class="input-large" placeholder="山田 太郎">
+                </div>
+                <div class="form-group">
+                    <label>Tel</label>
+                    <input type="tel" id="input-tel" required class="input-large" placeholder="090-0000-0000">
+                </div>
+                <div class="form-group">
+                    <label>受付者</label>
+                    <input type="text" id="input-receptionist" required class="input-large" value="担当者A">
+                </div>
+                <div class="form-group">
+                    <label>受付日</label>
+                    <input type="text" id="input-date" readonly class="input-large readonly">
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn-cancel" onclick="cancelForm()">取消</button>
+                    <button type="submit" class="btn-submit">入力 (登録)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 起動時の処理
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchCounts();
+        });
+
+        // 集計データを取得してボタンの数字を更新
+        async function fetchCounts() {
+            try {
+                const res = await fetch('/api/counts');
+                if (res.status === 401) {
+                    document.getElementById('login-screen').style.display = 'block';
+                    return;
+                }
+                document.getElementById('app-container').style.display = 'block';
+                
+                const counts = await res.json();
+                // 各ボタンの数字を更新
+                for (const [eventName, count] of Object.entries(counts)) {
+                    const badge = document.getElementById(`count-${eventName}`);
+                    if (badge) badge.textContent = `${count}人`;
+                }
+            } catch (e) {
+                console.error("読み込みエラー", e);
+            }
+        }
+
+        // フォームを開く
+        function openForm(eventName) {
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('entry-form').style.display = 'block';
+
+            // 自動入力
+            document.getElementById('input-event').value = eventName;
+            
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`;
+            document.getElementById('input-date').value = dateStr;
+        }
+
+        // キャンセル (ダッシュボードに戻る)
+        function cancelForm() {
+            document.getElementById('receptionForm').reset();
+            document.getElementById('entry-form').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+
+        // データ送信
+        async function submitData(e) {
+            e.preventDefault();
+            const submitBtn = document.querySelector('.btn-submit');
+            submitBtn.disabled = true;
+            submitBtn.textContent = "送信中...";
+
+            const data = {
+                eventName: document.getElementById('input-event').value,
+                name: document.getElementById('input-name').value,
+                tel: document.getElementById('input-tel').value,
+                receptionist: document.getElementById('input-receptionist').value,
+                date: document.getElementById('input-date').value
+            };
+
+            try {
+                const res = await fetch('/api/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    alert('登録しました！');
+                    cancelForm(); // フォームを閉じる
+                    fetchCounts(); // 集計を更新
+                } else {
+                    alert('エラーが発生しました');
+                }
+            } catch (err) {
+                alert('通信エラー');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "入力 (登録)";
+            }
+        }
+    </script>
+</body>
+</html>
